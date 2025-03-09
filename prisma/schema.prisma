@@ -25,37 +25,10 @@ model User {
   email         String    @unique
   password      String    // 仅用于密码登录
   emailVerified DateTime? // 邮箱验证时间
-  accounts      Account[] // OAuth 账户
-  sessions      Session[] // 登录会话
   knowledgeBases KnowledgeBase[]
   chats         Chat[]
 }
 
-model Account {
-  id                String  @id @default(uuid())
-  userId            String
-  user              User    @relation(fields: [userId], references: [id])
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  expires      DateTime
-}
 
 model KnowledgeBase {
   id        String  @id @default(uuid())
@@ -64,18 +37,9 @@ model KnowledgeBase {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String   @default("测试知识库")
   files     KnowledgeFile[]  // 新增文件关联
-  vectors   VectorData[]
   chats     ChatKnowledgeBase[]
   chunks    KnowledgeChunk[]
   createdAt   DateTime @default(now())
-}
-
-//该vector已弃用
-model VectorData {
-  id             String  @id @default(uuid())
-  knowledgeBaseId String
-  knowledgeBase  KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
-  vector         Json // 用 JSON 存储向量数据
 }
 
 model Chat {

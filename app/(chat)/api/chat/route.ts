@@ -3,7 +3,6 @@ import { streamText } from "ai";
 import { customModel } from "@/ai";
 import { createMessage } from "@/lib/db";
 
-export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { id, messages } = await req.json();
