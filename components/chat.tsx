@@ -103,13 +103,13 @@ export function Chat({
       <div
         ref={chatBoxRef}
         className={`w-full max-w-3xl flex-grow overflow-y-auto p-4 mt-4 space-y-8 transition-colors duration-300 ${
-          darkMode ? "bg-gray-400" : "bg-white"
+          darkMode ? "bg-gray-800" : "bg-white"
         }`}
         style={{ maxHeight: "calc(100vh - 220px)" }}
       >
         {messages.map((message, index) => (
           <div key={index} className="flex">
-            <PreviewMessage role={message.role} content={message.content} />
+            <PreviewMessage role={message.role} content={message.content} model={darkMode} />
           </div>
         ))}
       </div>
