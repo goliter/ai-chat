@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* 默认背景和前景颜色（白天模式） */
+:root {
+  --background: #ffffff;  /* 默认背景色为白色 */
+  --foreground: #000000;  /* 默认前景色为黑色 */
+}
+
+/* 暗黑模式下的背景和前景颜色 */
+.dark {
+  --background: #1a202c;  /* 暗黑模式背景色为深灰色 */
+  --foreground: #edf2f7;  /* 暗黑模式前景色为浅灰色 */
+}

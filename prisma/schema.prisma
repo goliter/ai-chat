@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  system
+  user
+  assistant
+  data
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String    // 仅用于密码登录
+  emailVerified DateTime? // 邮箱验证时间
+  accounts      Account[] // OAuth 账户
+  sessions      Session[] // 登录会话
+  knowledgeBases KnowledgeBase[]
+  chats         Chat[]
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id])
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  expires      DateTime
+}
+
+model KnowledgeBase {
+  id        String  @id @default(uuid())
+  name      String
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("测试知识库")
+  files     KnowledgeFile[]  // 新增文件关联
+  vectors   VectorData[]
+  chats     ChatKnowledgeBase[]
+  chunks    KnowledgeChunk[]
+  createdAt   DateTime @default(now())
+}
+
+//该vector已弃用
+model VectorData {
+  id             String  @id @default(uuid())
+  knowledgeBaseId String
+  knowledgeBase  KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  vector         Json // 用 JSON 存储向量数据
+}
+
+model Chat {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("测试chat")
+  messages    Message[]
+  knowledgeBases ChatKnowledgeBase[]
+  createdAt   DateTime @default(now())
+}
+
+model ChatKnowledgeBase {
+  chatId         String
+  knowledgeBaseId String
+  chat           Chat           @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  knowledgeBase  KnowledgeBase  @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, knowledgeBaseId]) // 复合主键，避免重复
+}
+
+model Message {
+  id       String  @id @default(uuid())
+  chatId   String
+  chat     Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role     Role    // 新增 role 字段，使用枚举
+  content  String
+  createdAt   DateTime @default(now())
+}
+
+// 新增文件存储模型
+model KnowledgeFile {
+  id             String   @id @default(uuid())
+  fileName       String   // 原始文件名
+  filePath       String   // 服务器存储路径
+  fileSize       Int      // 文件大小（字节）
+  mimeType       String   // 文件类型
+  knowledgeBase  KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  knowledgeBaseId String
+  createdAt      DateTime @default(now())
+}
+
+model KnowledgeChunk {
+  id              String        @id @default(uuid())
+  knowledgeBaseId String
+  content         String        // 文本内容（chunk）
+  embedding       Unsupported("vector(3072)")
+  createdAt       DateTime      @default(now())
+  
+  // 关联：一个知识库下有多个 chunk
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+}
