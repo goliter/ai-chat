@@ -11,37 +11,37 @@ AI-Chat是一个基于Next.js和React开发的现代化大语言模型的知识�
 ## 主要功能
 
 - 上传文件构建属于自己的知识库
-- - 支持doc, txt, md, pdf文件
+  - 支持doc, txt, md, pdf文件
   - 对上传的文件文本进行自然语言切割生成chunk
   - 使用chat gpt的text-embedding-3-large向量模型对chunk进行向量化并储存
 - 构建基于自己知识库的AI对话界面，与AI进行基于RAG的问答
-- - 对话可以与任意个知识库建立联系
+  - 对话可以与任意个知识库建立联系
   - 对话界面使用markdowm格式
   - 支持流式生成文本
   - 聊天界面支持夜间模式
 - 知识库与对话与账号绑定，不会丢失
-- - 相应数据保存于数据库中
+  - 相应数据保存于数据库中
 
 
 
 ## 技术栈
 
 - 前端框架
-- - Next.js 15
+  - Next.js 15
   - React 19
   - TypeScript
   - TailwindCSS
-- 后端框架
-- - Next.js 15
+  后端框架
+  - Next.js 15
 - 数据库
-- - PostgreSQL +  Prisma ORM
+  - PostgreSQL +  Prisma ORM
 - UI组件
-- - lucide-react
+  - lucide-react
   - framer-motion
 - Markdown格式对话框
-- - react-markdown
+  - react-markdown
 - AI能力集成
-- - OpenAI
+  - OpenAI
   - AI-SDK
   - langchain
 
