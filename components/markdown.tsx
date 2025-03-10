@@ -12,8 +12,11 @@ const NonMemoizedMarkdown = ({
   mode?: "light" | "dark";
 }) => {
   const isDark = mode === "dark";
+  // 自定义渲染组件集合
   const components = {
     code: ({ inline, className, children, ...props }: any) => {
+      // 代码块特殊处理：支持语法高亮，响应主题
+      // 区分行内代码和代码块，应用不同样式
       const match = /language-(\w+)/.exec(className || "");
       return !inline && match ? (
         <pre
@@ -35,6 +38,7 @@ const NonMemoizedMarkdown = ({
         </code>
       );
     },
+    // 列表组件
     ol: ({ children, ...props }: any) => (
       <ol
         className={`list-decimal list-outside ml-4 ${
@@ -57,14 +61,13 @@ const NonMemoizedMarkdown = ({
     ),
     li: ({ children, ...props }: any) => (
       <li
-        className={`py-1 ${
-          isDark ? "text-zinc-200" : "text-zinc-800"
-        }`}
+        className={`py-1 ${isDark ? "text-zinc-200" : "text-zinc-800"}`}
         {...props}
       >
         {children}
       </li>
     ),
+    // 文本修饰组件
     strong: ({ children, ...props }: any) => (
       <span
         className={`font-semibold ${
@@ -88,10 +91,7 @@ const NonMemoizedMarkdown = ({
       </Link>
     ),
     p: ({ children, ...props }: any) => (
-      <p
-        className={isDark ? "text-zinc-200" : "text-zinc-800"}
-        {...props}
-      >
+      <p className={isDark ? "text-zinc-200" : "text-zinc-800"} {...props}>
         {children}
       </p>
     ),
@@ -99,10 +99,7 @@ const NonMemoizedMarkdown = ({
 
   return (
     <div className={isDark ? "text-zinc-200" : "text-zinc-800"}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={components}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {children}
       </ReactMarkdown>
     </div>

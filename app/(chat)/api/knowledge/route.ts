@@ -13,7 +13,7 @@ import { PdfReader } from "pdfreader";
 import mammoth from "mammoth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany } from "ai";
-
+ 
 const progressStore = new Map<
   string,
   {

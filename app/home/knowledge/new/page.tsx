@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -13,6 +14,7 @@ export default function NewKnowledgePage() {
   const [error, setError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState<{
     percentage: number;
     currentStep: string;
@@ -31,7 +33,31 @@ export default function NewKnowledgePage() {
       setError("");
     }
   };
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
+  const handleDragIn = (e: React.DragEvent) => {
+    handleDrag(e);
+    if (e.dataTransfer.items?.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOut = (e: React.DragEvent) => {
+    handleDrag(e);
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    handleDrag(e);
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length > 0) {
+      setFiles(Array.from(e.dataTransfer.files));
+      setError("");
+    }
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +68,7 @@ export default function NewKnowledgePage() {
       currentStep: "准备上传文件",
       errors: [],
     });
-    
+
     const userId = session?.user?.id;
     if (!userId || !title.trim()) {
       setError("用户未登录或标题为空");
@@ -77,7 +103,6 @@ export default function NewKnowledgePage() {
       setError(error instanceof Error ? error.message : "发生未知错误");
       setLoading(false); // 错误时立即关闭 loading
     } finally {
-
     }
   };
 
@@ -169,18 +194,25 @@ export default function NewKnowledgePage() {
               className="hidden"
               accept=".pdf,.doc,.docx,.txt,.md"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors"
+            <div
+              onDragEnter={handleDragIn}
+              onDragLeave={handleDragOut}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
             >
-              <div className="flex flex-col items-center text-gray-500">
-                <span className="text-lg">点击选择文件或拖放文件到这里</span>
-                <span className="text-sm mt-1">
-                  支持格式：PDF, DOC, TXT, MD（单个文件不超过20MB）
-                </span>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors"
+              >
+                <div className="flex flex-col items-center text-gray-500">
+                  <span className="text-lg">点击选择文件或拖放文件到这里</span>
+                  <span className="text-sm mt-1">
+                    支持格式：PDF, DOC, TXT, MD（单个文件不超过20MB）
+                  </span>
+                </div>
+              </button>
+            </div>
 
             {/* 已选文件列表 */}
             {files.length > 0 && (
