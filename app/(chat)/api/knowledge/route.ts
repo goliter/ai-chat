@@ -14,14 +14,14 @@ import mammoth from "mammoth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany } from "ai";
 
-// 进度存储对象
 const progressStore = new Map<
   string,
   {
-    total: number;
-    processed: number;
+    percentage: number;
     currentStep: string;
     errors: string[];
+    total: number;
+    processedFiles: number;
   }
 >();
 
@@ -55,9 +55,10 @@ export async function POST(req: NextRequest) {
     // 初始化进度
     progressStore.set(taskId, {
       total: files.length,
-      processed: 0,
+      processedFiles: 0,
       currentStep: "准备开始",
       errors: [],
+      percentage: 0,
     });
 
     // 异步处理文件
@@ -89,10 +90,8 @@ export async function GET(req: NextRequest) {
 
   const progress = progressStore.get(taskId)!;
   return NextResponse.json({
-    total: progress.total,
-    processed: progress.processed,
+    percentage: progress.percentage,
     currentStep: progress.currentStep,
-    percentage: Math.round((progress.processed / progress.total) * 100),
     errors: progress.errors,
   });
 }
@@ -105,50 +104,56 @@ async function processFilesAsync(
   taskId: string
 ) {
   try {
-    const savedFiles = await Promise.all(
+    const totalSteps = files.length * 4;
+    let completedSteps = 0;
+
+    // 增强进度更新逻辑
+    const updateStepProgress = () => {
+      completedSteps++;
+      const percentage = Math.round((completedSteps / totalSteps) * 100);
+      updateProgress(taskId, {
+        percentage,
+        currentStep: `处理文件中 (${percentage}%)`,
+        processedFiles: Math.floor(completedSteps / 4),
+      });
+    };
+
+    await Promise.allSettled(
       files.map(async (file, index) => {
         try {
-          // 更新处理状态
+          // 步骤1: 初始化处理
           updateProgress(taskId, {
             currentStep: `开始处理文件 ${index + 1}/${files.length} (${
               file.name
             })`,
           });
 
+          // 文件存储逻辑
           const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
           const fileName = `${uuidv4()}.${fileExt}`;
           const filePath = join(uploadDir, fileName);
           const buffer = Buffer.from(await file.arrayBuffer());
 
-          // 写入文件
           await writeFile(filePath, buffer);
-          updateProgress(taskId, {
-            currentStep: `存储文件完成 (${file.name})`,
-          });
+          updateStepProgress();
 
-          // 解析文件内容
-          updateProgress(taskId, {
-            currentStep: `解析文件内容 (${file.name})`,
-          });
+          // 步骤2: 解析内容
           const fileContent = await parseFileContent(file, buffer, fileExt);
+          updateStepProgress();
 
-          // 文本分块
-          updateProgress(taskId, {
-            currentStep: `分块处理 (${file.name})`,
-          });
+          // 步骤3: 分块处理
           const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
           });
           const chunks = await splitter.createDocuments([fileContent]);
+          updateStepProgress();
 
-          // 向量化处理
-          updateProgress(taskId, {
-            currentStep: `生成嵌入向量 (${file.name})`,
-          });
+          // 步骤4: 向量化处理
           const { embeddings } = await embedMany({
             model: openai.embedding("text-embedding-3-large"),
             values: chunks.map((chunk) => chunk.pageContent),
           });
+          updateStepProgress();
 
           // 存储分块
           await Promise.all(
@@ -171,7 +176,7 @@ async function processFilesAsync(
           });
 
           // 更新处理进度
-          updateProgress(taskId, { processed: index + 1 });
+          updateProgress(taskId, { processedFiles: index + 1 });
           return fileRecord;
         } catch (error) {
           const errorMsg = `文件 ${file.name} 处理失败: ${
@@ -198,9 +203,10 @@ function updateProgress(
   taskId: string,
   update: Partial<{
     total: number;
-    processed: number;
+    processedFiles: number;
     currentStep: string;
     errors: string[];
+    percentage: number;
   }>
 ) {
   const current = progressStore.get(taskId)!;
@@ -215,13 +221,12 @@ function updateProgress(
 async function parseFileContent(file: File, buffer: Buffer, fileExt: string) {
   try {
     if (file.type === "application/pdf" || fileExt === "pdf") {
-      const reader = new PdfReader();
-      return await new Promise<string>((resolve, reject) => {
+      return new Promise<string>((resolve, reject) => {
         let text = "";
-        reader.parseBuffer(buffer, (err, item) => {
-          if (err) reject(err);
-          else if (!item) resolve(text);
-          else if (item.text) text += item.text + " ";
+        new PdfReader(null).parseBuffer(buffer, (err, item) => {
+          if (err) return reject(err);
+          if (!item) return resolve(text.trim());
+          if (item.text) text += item.text + "\n";
         });
       });
     }

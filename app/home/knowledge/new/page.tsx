@@ -37,6 +37,12 @@ export default function NewKnowledgePage() {
     setLoading(true);
     setError("");
 
+    setProgress({
+      percentage: 0,
+      currentStep: "准备上传文件",
+      errors: [],
+    });
+    
     const userId = session?.user?.id;
     if (!userId || !title.trim()) {
       setError("用户未登录或标题为空");
@@ -69,8 +75,9 @@ export default function NewKnowledgePage() {
     } catch (error) {
       console.error("创建知识库出错：", error);
       setError(error instanceof Error ? error.message : "发生未知错误");
+      setLoading(false); // 错误时立即关闭 loading
     } finally {
-      setLoading(false);
+
     }
   };
 
@@ -78,26 +85,38 @@ export default function NewKnowledgePage() {
   const startProgressPolling = (taskId: string) => {
     const poll = async () => {
       try {
+        // 添加加载状态检查
+        if (!loading) {
+          setLoading(true);
+        }
         const res = await fetch(`/api/knowledge?taskId=${taskId}`);
-        if (!res.ok) return;
+
+        // 添加网络状态检查
+        if (!res.ok || res.status >= 400) {
+          throw new Error(`请求失败: ${res.status}`);
+        }
 
         const data = await res.json();
-        setProgress({
-          percentage: data.percentage,
-          currentStep: data.currentStep,
-          errors: data.errors,
-        });
+        setProgress((prev) => ({
+          ...prev,
+          percentage: data.percentage || 0, // 确保默认值
+          currentStep: data.currentStep || "处理中",
+          errors: data.errors || [],
+        }));
 
-        if (data.percentage < 100) {
-          setTimeout(poll, 1000);
-        } else {
+        // 修改完成条件判断
+        if (data.percentage >= 100 || data.errors?.length > 0) {
           setLoading(false);
-          if (data.errors.length === 0) {
+          if (data.percentage >= 100 && data.errors?.length === 0) {
             router.push(`/home/knowledge`);
           }
+        } else {
+          setTimeout(poll, 1000);
         }
       } catch (error) {
         console.error("进度查询失败:", error);
+        setLoading(false);
+        setError("进度更新失败，请刷新页面重试");
       }
     };
     poll();
@@ -199,22 +218,29 @@ export default function NewKnowledgePage() {
         {/* 进度条 */}
         {loading && (
           <div className="space-y-4">
-            <div className="relative pt-1">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">
-                  处理进度 - {progress.percentage}%
-                </span>
-                <span className="text-sm text-gray-600">
-                  {progress.currentStep}
-                </span>
+            {/* 当进度为0时显示基础加载状态 */}
+            {progress.percentage === 0 && (
+              <div className="text-center py-4">正在初始化上传任务...</div>
+            )}
+            {/* 当有实际进度时显示进度条 */}
+            {progress.percentage > 0 && (
+              <div className="relative pt-1">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    处理进度 - {progress.percentage}%
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {progress.currentStep}
+                  </span>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 rounded-full bg-blue-100">
+                  <div
+                    style={{ width: `${progress.percentage}%` }}
+                    className="h-full bg-blue-600 transition-all duration-300"
+                  />
+                </div>
               </div>
-              <div className="overflow-hidden h-2 mb-4 rounded-full bg-blue-100">
-                <div
-                  style={{ width: `${progress.percentage}%` }}
-                  className="h-full bg-blue-600 transition-all duration-300"
-                />
-              </div>
-            </div>
+            )}
 
             {progress.errors.length > 0 && (
               <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg">
@@ -242,4 +268,3 @@ export default function NewKnowledgePage() {
     </div>
   );
 }
-
