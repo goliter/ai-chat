@@ -14,8 +14,9 @@ export async function saltAndHashPassword(password: string): Promise<string> {
     // 生成盐并哈希密码
     const hashedPassword = await hash(password, SALT_ROUNDS);
     return hashedPassword;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
-    throw new Error("密码哈希失败");
+    throw new Error(
+      `密码哈希失败: ${error instanceof Error ? error.message : "未知错误"}`
+    );
   }
 }

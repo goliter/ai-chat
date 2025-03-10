@@ -2,7 +2,7 @@
 
 import { createUser, getUserFromDb } from "@/lib/db";
 import { signIn } from "./auth";
-//import { saltAndHashPassword } from "@/app/utils/password";
+import { saltAndHashPassword } from "@/app/utils/password";
 
 export interface LoginActionState {
   status: "idle" | "in_progress" | "success" | "failed";
@@ -34,7 +34,8 @@ export const register = async (
   formData: FormData
 ) => {
   const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  // 对密码进行哈希，以达到不存明文密码的目的
+  const password =  await saltAndHashPassword(formData.get("password") as string);
 
   const user = await getUserFromDb(email);
 

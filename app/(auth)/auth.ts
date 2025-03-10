@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import Credentials from "next-auth/providers/credentials";
 import { signInSchema } from "@/lib/zod";
 import { getUserFromDb } from "@/lib/db";
+import { compareSync } from "bcrypt-ts";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -28,8 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             throw new Error("user not found.");
           }
 
-          if (user.password !== password) {
-            console.log("密码不匹配，抛出错误");
+          if (!compareSync(password, user.password)) {
+            console.log("密码哈希不匹配，抛出错误");
             throw new Error("password error.");
           }
 
