@@ -17,11 +17,11 @@ import { embedMany } from "ai";
 const progressStore = new Map<
   string,
   {
-    percentage: number;
-    currentStep: string;
-    errors: string[];
-    total: number;
-    processedFiles: number;
+    percentage: number; // 总进度百分比
+    currentStep: string; // 当前步骤描述
+    errors: string[]; // 错误集合
+    total: number; // 总文件数
+    processedFiles: number; // 已处理文件数
   }
 >();
 
@@ -45,8 +45,10 @@ export async function POST(req: NextRequest) {
 
     // 创建知识库记录
     const knowledgeBase = await createKnowledgeBase(session.user.id, title);
-    const uploadDir = join(process.cwd(), "uploads");
-    await mkdir(uploadDir, { recursive: true });
+
+    // 准备上传目录
+    const uploadDir = join(process.cwd(), "uploads"); //获取Node.js进程的当前工作目录（项目根目录）
+    await mkdir(uploadDir, { recursive: true }); //递归创建目录（如果父目录不存在则自动创建）
 
     // 处理上传文件
     const files = formData.getAll("files") as File[];
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 新增GET方法处理进度查询
+// GET方法处理进度查询
 export async function GET(req: NextRequest) {
   const taskId = req.nextUrl.searchParams.get("taskId");
   if (!taskId || !progressStore.has(taskId)) {
@@ -104,7 +106,7 @@ async function processFilesAsync(
   taskId: string
 ) {
   try {
-    const totalSteps = files.length * 4;
+    const totalSteps = files.length * 4; // (存储 + 解析 + 分块 + 向量化) × 文件数
     let completedSteps = 0;
 
     // 增强进度更新逻辑
@@ -129,10 +131,10 @@ async function processFilesAsync(
           });
 
           // 文件存储逻辑
-          const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-          const fileName = `${uuidv4()}.${fileExt}`;
-          const filePath = join(uploadDir, fileName);
-          const buffer = Buffer.from(await file.arrayBuffer());
+          const fileExt = file.name.split(".").pop()?.toLowerCase() || ""; //文件扩展名提取
+          const fileName = `${uuidv4()}.${fileExt}`; //安全文件名生成
+          const filePath = join(uploadDir, fileName); //文件存储路径构建
+          const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
 
           await writeFile(filePath, buffer);
           updateStepProgress();
@@ -148,7 +150,7 @@ async function processFilesAsync(
           const chunks = await splitter.createDocuments([fileContent]);
           updateStepProgress();
 
-          // 步骤4: 向量化处理
+          // 步骤4: 向量化处理(最慢的一部分)
           const { embeddings } = await embedMany({
             model: openai.embedding("text-embedding-3-large"),
             values: chunks.map((chunk) => chunk.pageContent),
