@@ -10,15 +10,21 @@ export default function NewKnowledgePage() {
   const { data: session, status } = useSession();
   const [title, setTitle] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [uploadProgress] = useState<number>(0);
   const [error, setError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<{
+    percentage: number;
+    currentStep: string;
+    errors: string[];
+  }>({ percentage: 0, currentStep: "", errors: [] });
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/");
     }
   }, [status, router]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
@@ -47,7 +53,6 @@ export default function NewKnowledgePage() {
     try {
       const formData = new FormData();
       formData.append("title", title);
-      formData.append("userId", userId);
       files.forEach((file) => formData.append("files", file));
 
       const res = await fetch("/api/knowledge", {
@@ -56,18 +61,46 @@ export default function NewKnowledgePage() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "创建失败");
+        throw new Error(await res.text());
       }
 
-      const data = await res.json();
-      router.push(`/home/knowledge/${data.id}`);
+      const { taskId } = await res.json();
+      startProgressPolling(taskId);
     } catch (error) {
       console.error("创建知识库出错：", error);
       setError(error instanceof Error ? error.message : "发生未知错误");
     } finally {
       setLoading(false);
     }
+  };
+
+  // 进度轮询逻辑
+  const startProgressPolling = (taskId: string) => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/knowledge?taskId=${taskId}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setProgress({
+          percentage: data.percentage,
+          currentStep: data.currentStep,
+          errors: data.errors,
+        });
+
+        if (data.percentage < 100) {
+          setTimeout(poll, 1000);
+        } else {
+          setLoading(false);
+          if (data.errors.length === 0) {
+            router.push(`/home/knowledge`);
+          }
+        }
+      } catch (error) {
+        console.error("进度查询失败:", error);
+      }
+    };
+    poll();
   };
 
   return (
@@ -165,20 +198,36 @@ export default function NewKnowledgePage() {
 
         {/* 进度条 */}
         {loading && (
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block text-blue-600">
-                  上传进度 {Math.round(uploadProgress)}%
+          <div className="space-y-4">
+            <div className="relative pt-1">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">
+                  处理进度 - {progress.percentage}%
+                </span>
+                <span className="text-sm text-gray-600">
+                  {progress.currentStep}
                 </span>
               </div>
+              <div className="overflow-hidden h-2 mb-4 rounded-full bg-blue-100">
+                <div
+                  style={{ width: `${progress.percentage}%` }}
+                  className="h-full bg-blue-600 transition-all duration-300"
+                />
+              </div>
             </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-100">
-              <div
-                style={{ width: `${uploadProgress}%` }}
-                className="transition-all duration-300 shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-              />
-            </div>
+
+            {progress.errors.length > 0 && (
+              <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg">
+                <h4 className="font-medium mb-2">部分文件处理失败：</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  {progress.errors.map((err, i) => (
+                    <li key={i} className="text-sm">
+                      {err}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
@@ -193,3 +242,4 @@ export default function NewKnowledgePage() {
     </div>
   );
 }
+
