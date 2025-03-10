@@ -69,11 +69,11 @@ export default function SignIn() {
 
         {status.status === "failed" && (
           <p className="text-red-500 text-sm mb-4">
-            Invalid credentials. Please try again.
+            密码错误，请重试！
           </p>
         )}
         {status.status === "success" && (
-          <p className="text-green-500 text-sm mb-4">Login successful!</p>
+          <p className="text-green-500 text-sm mb-4">登录成功!</p>
         )}
 
         <button

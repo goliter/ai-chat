@@ -34,7 +34,7 @@ export default function Register() {
             htmlFor="email"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Email
+            邮箱
           </label>
           <input
             id="email"
@@ -50,7 +50,7 @@ export default function Register() {
             htmlFor="password"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Password
+            密码
           </label>
           <input
             id="password"
@@ -66,7 +66,7 @@ export default function Register() {
             htmlFor="confirm-password"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Confirm Password
+            确认密码
           </label>
           <input
             id="confirm-password"
@@ -87,12 +87,12 @@ export default function Register() {
         )}
         {status.status === "failed" && (
           <p className="text-red-500 text-sm mb-4">
-            Registration failed. Try again.
+            注册失败，请重试！
           </p>
         )}
         {status.status === "success" && (
           <p className="text-green-500 text-sm mb-4">
-            Registration successful!
+            注册成功！
           </p>
         )}
 
