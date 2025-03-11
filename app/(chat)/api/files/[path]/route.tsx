@@ -1,4 +1,3 @@
-// app/api/files/[path]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { join } from "path";
 import { readFileSync } from "fs";
@@ -6,7 +5,7 @@ import { auth } from "@/app/(auth)/auth";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { path: string } }
+  { params }: { params: { [key: string]: string } }
 ) {
   const session = await auth();
   if (!session?.user?.id) {
