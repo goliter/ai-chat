@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import {
   createKnowledgeBase,
@@ -13,7 +11,7 @@ import { PdfReader } from "pdfreader";
 import mammoth from "mammoth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany } from "ai";
- 
+
 const progressStore = new Map<
   string,
   {
@@ -46,10 +44,6 @@ export async function POST(req: NextRequest) {
     // 创建知识库记录
     const knowledgeBase = await createKnowledgeBase(session.user.id, title);
 
-    // 准备上传目录
-    const uploadDir = join(process.cwd(), "uploads"); //获取Node.js进程的当前工作目录（项目根目录）
-    await mkdir(uploadDir, { recursive: true }); //递归创建目录（如果父目录不存在则自动创建）
-
     // 处理上传文件
     const files = formData.getAll("files") as File[];
     const taskId = uuidv4(); // 生成唯一任务ID
@@ -64,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 异步处理文件
-    processFilesAsync(files, knowledgeBase.id, uploadDir, taskId);
+    processFilesAsync(files, knowledgeBase.id, taskId);
 
     // 返回任务ID
     return NextResponse.json({
@@ -102,11 +96,10 @@ export async function GET(req: NextRequest) {
 async function processFilesAsync(
   files: File[],
   knowledgeBaseId: string,
-  uploadDir: string,
   taskId: string
 ) {
   try {
-    const totalSteps = files.length * 4; // (存储 + 解析 + 分块 + 向量化) × 文件数
+    const totalSteps = files.length * 3; // (解析 + 分块 + 向量化) × 文件数
     let completedSteps = 0;
 
     // 增强进度更新逻辑
@@ -116,7 +109,7 @@ async function processFilesAsync(
       updateProgress(taskId, {
         percentage,
         currentStep: `处理文件中 (${percentage}%)`,
-        processedFiles: Math.floor(completedSteps / 4),
+        processedFiles: Math.floor(completedSteps / 3),
       });
     };
 
@@ -131,15 +124,12 @@ async function processFilesAsync(
           });
 
           // 文件存储逻辑
-          const fileExt = file.name.split(".").pop()?.toLowerCase() || ""; //文件扩展名提取
-          const fileName = `${uuidv4()}.${fileExt}`; //安全文件名生成
-          const filePath = join(uploadDir, fileName); //文件存储路径构建
           const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
-
-          await writeFile(filePath, buffer);
+          console.log(`[File Process] ${file.name}`); // 修改日志标签
           updateStepProgress();
 
           // 步骤2: 解析内容
+          const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
           const fileContent = await parseFileContent(file, buffer, fileExt);
           updateStepProgress();
 
@@ -171,7 +161,7 @@ async function processFilesAsync(
           // 创建文件记录
           const fileRecord = await createFileRecord({
             fileName: file.name,
-            filePath: fileName,
+            filePath: "memory://" + file.name, // 使用内存路径标识
             fileSize: file.size,
             mimeType: file.type,
             knowledgeBaseId,

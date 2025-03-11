@@ -64,13 +64,6 @@ function FileItem({ file }: { file: FileRecord }) {
           {(file.fileSize / 1024).toFixed(2)} KB
         </span>
       </div>
-      <a
-        href={`/api/files/${file.filePath}`}
-        download
-        className="px-3 py-1 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
-      >
-        下载
-      </a>
     </div>
   );
 }
