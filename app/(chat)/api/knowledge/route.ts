@@ -141,23 +141,14 @@ async function processFilesAsync(
 
           // 步骤3: 向量化处理(最慢的一部分)
           const BATCH_SIZE = 32; // 基于 token 限制计算 (8192 tokens/request ÷ 平均 256 tokens/chunk)
-          const REQUEST_TIMEOUT = 60000;
           const embeddingPromises = [];
           for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
             const batch = chunks.slice(i, i + BATCH_SIZE);
-            const controller = new AbortController();
-            const timeoutId = setTimeout(
-              () => controller.abort(),
-              REQUEST_TIMEOUT
-            );
-
             embeddingPromises.push(
               embedMany({
                 model: openai.embedding("text-embedding-3-large"),
                 values: batch.map((chunk) => chunk.pageContent),
-                maxRetries: 5,
-                abortSignal: controller.signal,
-              }).finally(() => clearTimeout(timeoutId))
+              })
             );
           }
 
