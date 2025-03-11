@@ -14,35 +14,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       authorize: async (credentials) => {
         try {
-          console.log("开始解析表单数据...");
-          console.log("收到的 credentials:", credentials);
           const { email, password } = await signInSchema.parseAsync(
             credentials
           );
-          console.log(`解析得到的邮箱: ${email}, 密码: ${password}`);
-
-          console.log("开始从数据库获取用户信息...");
           const user = await getUserFromDb(email);
-          console.log("从数据库获取的用户信息:", user);
 
-          if (!user) {
-            console.log("用户未找到，抛出错误");
-            throw new Error("user not found.");
+          if (!user || !compareSync(password, user.password)) {
+            // 抛出明确错误信息
+            throw new Error("邮箱或密码错误");
           }
 
-          if (!compareSync(password, user.password)) {
-            console.log("密码哈希不匹配，抛出错误");
-            throw new Error("password error.");
-          }
-
-          console.log("用户验证通过，返回用户信息");
-          return user;
+          // 返回符合NextAuth要求的用户对象
+          return {
+            id: user.id,
+            email: user.email,
+          };
         } catch (error) {
           if (error instanceof ZodError) {
-            console.log("表单数据验证失败，返回 null");
-            return null;
+            throw new Error("无效的表单数据格式");
           }
-          console.log("发生其他错误，返回 null:", error);
           return null;
         }
       },

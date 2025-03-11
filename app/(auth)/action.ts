@@ -34,8 +34,11 @@ export const register = async (
   formData: FormData
 ) => {
   const email = formData.get("email") as string;
+  const rawPassword = formData.get("password") as string; // 保留原始密码
   // 对密码进行哈希，以达到不存明文密码的目的
-  const password =  await saltAndHashPassword(formData.get("password") as string);
+  const password = await saltAndHashPassword(
+    formData.get("password") as string
+  );
 
   const user = await getUserFromDb(email);
 
@@ -47,7 +50,7 @@ export const register = async (
     await createUser(email, password);
     await signIn("credentials", {
       email,
-      password,
+      password: rawPassword,
       redirect: false,
     });
     return { status: "success" } as RegisterActionState;
