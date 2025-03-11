@@ -15,6 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: async (credentials) => {
         try {
           console.log("开始解析表单数据...");
+          console.log("收到的 credentials:", credentials);
           const { email, password } = await signInSchema.parseAsync(
             credentials
           );
