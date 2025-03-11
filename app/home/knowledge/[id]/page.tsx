@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from "@/app/(auth)/auth";
 import { redirect } from "next/navigation";
 import { getKnowledgeBaseById, getFilesByKnowledgeBaseId } from "@/lib/db";
@@ -20,7 +21,7 @@ export interface FileRecord {
 export default async function KnowledgeDetailPage({
   params: rawParams,
 }: {
-  params: { id: string };
+  params: any;
 }) {
   const session = await auth();
 

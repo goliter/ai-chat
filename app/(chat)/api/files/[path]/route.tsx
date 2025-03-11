@@ -3,11 +3,11 @@ import { join } from "path";
 import { readFileSync } from "fs";
 import { auth } from "@/app/(auth)/auth";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { [key: string]: string } }
-) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function GET(req: NextRequest, context: any ) {
+  const { params } = context as { params: { path: string } };
   const session = await auth();
+
   if (!session?.user?.id) {
     return new NextResponse(null, { status: 401 });
   }
@@ -18,7 +18,9 @@ export async function GET(
 
     return new NextResponse(buffer, {
       headers: {
-        "Content-Disposition": `attachment; filename="${params.path}"`,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(
+          params.path
+        )}"`,
       },
     });
   } catch (error) {

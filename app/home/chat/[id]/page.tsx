@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Chat as PreviewChat } from "@/components/chat";
 import { getChatById } from "@/lib/db";
 import { auth } from "@/app/(auth)/auth";
@@ -9,12 +10,11 @@ type ChatWithMessages = Chat & {
 };
 
 export default async function Page({
-  params: rawParams,
+  params
 }: {
-  params: { id: string };
+  params: any;
 }) {
-  const params = await rawParams; // 先解析 params
-  // 执行身份验证
+
   const session = await auth();
   if (!session) {
     redirect("/");
