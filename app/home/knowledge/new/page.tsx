@@ -151,7 +151,7 @@ export default function NewKnowledgePage() {
     <div className="max-w-3xl mx-auto p-6">
       {/* 返回按钮 */}
       <Button
-        onClick={() => router.back()}
+        onClick={() => router.replace("/home/knowledge")}
         className="fixed left-4 bottom-12 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
       >
         返回

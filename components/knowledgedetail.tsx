@@ -15,7 +15,7 @@ export default function KnowledgeDetail({
   return (
     <div className="max-w-3xl mx-auto p-6">
       <button
-        onClick={() => router.back()}
+        onClick={() => router.replace("/home/knowledge")}
         className="fixed bottom-20 left-8 p-3 rounded-full shadow-lg text-lg font-semibold transition-all flex items-center space-x-2 bg-white text-gray-800 hover:bg-gray-200"
       >
         ⬅ 返回

@@ -77,7 +77,7 @@ export function Chat({
 
       {/* 返回按钮 */}
       <button
-        onClick={() => router.back()}
+        onClick={() => router.replace("/home/chat")}
         className={`fixed bottom-20 left-8 p-3 rounded-full shadow-lg text-lg font-semibold transition-colors duration-300 flex items-center space-x-2 ${
           darkMode
             ? "bg-gray-800 text-white hover:bg-gray-700"
@@ -109,7 +109,11 @@ export function Chat({
       >
         {messages.map((message, index) => (
           <div key={index} className="flex">
-            <PreviewMessage role={message.role} content={message.content} model={darkMode} />
+            <PreviewMessage
+              role={message.role}
+              content={message.content}
+              model={darkMode}
+            />
           </div>
         ))}
       </div>

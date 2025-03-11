@@ -30,7 +30,6 @@ export default async function KnowledgeDetailPage({
   }
   const params = await rawParams;
   try {
-    // 数据库操作保留在页面层
     const [knowledge, files] = await Promise.all([
       getKnowledgeBaseById(params.id),
       getFilesByKnowledgeBaseId(params.id),

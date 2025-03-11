@@ -63,7 +63,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
       {/* 返回按钮 */}
       <Button
-        onClick={() => router.back()}
+        onClick={() => router.replace("/home")}
         className="fixed left-4 bottom-12 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
       >
         返回
