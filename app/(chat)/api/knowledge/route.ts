@@ -126,7 +126,6 @@ async function processFilesAsync(
           // 文件存储逻辑
           const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
           console.log(`[File Process] ${file.name}`); // 修改日志标签
-          updateStepProgress();
 
           // 步骤2: 解析内容
           const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
