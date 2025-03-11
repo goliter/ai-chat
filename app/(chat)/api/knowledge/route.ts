@@ -127,23 +127,43 @@ async function processFilesAsync(
           const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
           console.log(`[File Process] ${file.name}`); // 修改日志标签
 
-          // 步骤2: 解析内容
+          // 步骤1: 解析内容
           const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
           const fileContent = await parseFileContent(file, buffer, fileExt);
           updateStepProgress();
 
-          // 步骤3: 分块处理
+          // 步骤2: 分块处理
           const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
           });
           const chunks = await splitter.createDocuments([fileContent]);
           updateStepProgress();
 
-          // 步骤4: 向量化处理(最慢的一部分)
-          const { embeddings } = await embedMany({
-            model: openai.embedding("text-embedding-3-large"),
-            values: chunks.map((chunk) => chunk.pageContent),
-          });
+          // 步骤3: 向量化处理(最慢的一部分)
+          const BATCH_SIZE = 32; // 基于 token 限制计算 (8192 tokens/request ÷ 平均 256 tokens/chunk)
+          const REQUEST_TIMEOUT = 60000;
+          const embeddingPromises = [];
+          for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+            const batch = chunks.slice(i, i + BATCH_SIZE);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(
+              () => controller.abort(),
+              REQUEST_TIMEOUT
+            );
+
+            embeddingPromises.push(
+              embedMany({
+                model: openai.embedding("text-embedding-3-large"),
+                values: batch.map((chunk) => chunk.pageContent),
+                maxRetries: 5,
+                abortSignal: controller.signal,
+              }).finally(() => clearTimeout(timeoutId))
+            );
+          }
+
+          // 并行处理所有批量请求
+          const results = await Promise.all(embeddingPromises);
+          const embeddings = results.flatMap((r) => r.embeddings);
           updateStepProgress();
 
           // 存储分块
