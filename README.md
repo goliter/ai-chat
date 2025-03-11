@@ -31,7 +31,7 @@ AI-Chat是一个基于Next.js和React开发的现代化大语言模型的知识�
   - React 19
   - TypeScript
   - TailwindCSS
-  后端框架
+- 后端框架
   - Next.js 15
 - 数据库
   - PostgreSQL +  Prisma ORM
