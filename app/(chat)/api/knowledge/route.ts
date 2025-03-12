@@ -109,7 +109,7 @@ async function processFilesAsync(
   taskId: string
 ) {
   try {
-    const totalSteps = files.length * 3; // (解析 + 分块 + 向量化) × 文件数
+    const totalSteps = files.length ; //文件数
     let completedSteps = 0;
 
     // 增强进度更新逻辑
@@ -119,7 +119,7 @@ async function processFilesAsync(
       updateProgress(taskId, {
         percentage,
         currentStep: `处理文件中 (${percentage}%)`,
-        processedFiles: Math.floor(completedSteps / 3),
+        processedFiles: Math.floor(completedSteps),
       });
     };
 
@@ -140,14 +140,12 @@ async function processFilesAsync(
           // 步骤1: 解析内容
           const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
           const fileContent = await parseFileContent(file, buffer, fileExt);
-          updateStepProgress();
 
           // 步骤2: 分块处理
           const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
           });
           const chunks = await splitter.createDocuments([fileContent]);
-          updateStepProgress();
 
           // 步骤3: 向量化处理(最慢的一部分)
           const BATCH_SIZE = 32; // 基于 token 限制计算 (8192 tokens/request ÷ 平均 256 tokens/chunk)
@@ -175,7 +173,7 @@ async function processFilesAsync(
             mimeType: file.type,
             knowledgeBaseId,
           });
-          
+
           // 存储分块
           await Promise.all(
             chunks.map(async (chunk, index) => {
