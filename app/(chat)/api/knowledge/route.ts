@@ -76,20 +76,31 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET方法处理进度查询
+// 修改GET方法处理逻辑
 export async function GET(req: NextRequest) {
   const taskId = req.nextUrl.searchParams.get("taskId");
-  if (!taskId || !progressStore.has(taskId)) {
-    return NextResponse.json({ message: "无效的任务ID" }, { status: 400 });
+  if (!taskId) {
+    return NextResponse.json(
+      { message: "缺少必要参数: taskId" }, 
+      { status: 400 }
+    );
+  }
+  
+  const progress = progressStore.get(taskId);
+  if (!progress) {
+    return NextResponse.json(
+      { message: "任务不存在或已过期" },
+      { status: 404 } // 将404改为更合适的错误代码
+    );
   }
 
-  const progress = progressStore.get(taskId)!;
   return NextResponse.json({
     percentage: progress.percentage,
     currentStep: progress.currentStep,
     errors: progress.errors,
   });
 }
+
 
 // 异步文件处理函数
 async function processFilesAsync(
@@ -156,6 +167,15 @@ async function processFilesAsync(
           const embeddings = results.flatMap((r) => r.embeddings);
           updateStepProgress();
 
+          // 创建文件记录
+          const fileRecord = await createFileRecord({
+            fileName: file.name,
+            filePath: "memory://" + file.name, // 使用内存路径标识
+            fileSize: file.size,
+            mimeType: file.type,
+            knowledgeBaseId,
+          });
+          
           // 存储分块
           await Promise.all(
             chunks.map(async (chunk, index) => {
@@ -166,15 +186,6 @@ async function processFilesAsync(
               });
             })
           );
-
-          // 创建文件记录
-          const fileRecord = await createFileRecord({
-            fileName: file.name,
-            filePath: "memory://" + file.name, // 使用内存路径标识
-            fileSize: file.size,
-            mimeType: file.type,
-            knowledgeBaseId,
-          });
 
           // 更新处理进度
           updateProgress(taskId, { processedFiles: index + 1 });
