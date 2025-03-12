@@ -276,7 +276,7 @@ export async function createChunkRecordRaw(data: {
     await prisma.$executeRaw`
       INSERT INTO "KnowledgeChunk" 
       ("id", "knowledgeBaseId", "content", "embedding", "createdAt")
-      VALUES (${id}, ${data.knowledgeBaseId}, ${data.content}, ${data.embedding}::vector, NOW())
+      VALUES (${id}, ${data.knowledgeBaseId}, ${data.content}, ${data.embedding}::vector(1536), NOW())
     `;
     return { id, ...data };
   } catch (error) {
