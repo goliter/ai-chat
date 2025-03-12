@@ -29,7 +29,7 @@ export default function NewKnowledgePage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]); // 合并旧文件和新文件
       setError("");
     }
   };
@@ -54,7 +54,7 @@ export default function NewKnowledgePage() {
     handleDrag(e);
     setIsDragging(false);
     if (e.dataTransfer.files?.length > 0) {
-      setFiles(Array.from(e.dataTransfer.files));
+      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]); // 合并旧文件和新文件
       setError("");
     }
   };
