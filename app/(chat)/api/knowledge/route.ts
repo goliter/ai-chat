@@ -132,7 +132,6 @@ async function processFilesAsync(
     await Promise.allSettled(
       files.map(async (file) => {
         try {
-
           // 文件存储逻辑
           const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
           console.log(`[File Process] ${file.name}`); // 修改日志标签
@@ -173,16 +172,22 @@ async function processFilesAsync(
             knowledgeBaseId,
           });
 
-          // 存储分块
-          await Promise.all(
-            chunks.map(async (chunk, index) => {
-              await createChunkRecordRaw({
-                knowledgeBaseId,
-                content: chunk.pageContent,
-                embedding: embeddings[index],
-              });
-            })
-          );
+          // 修改分块存储逻辑 - 添加批处理控制
+          await(async function processChunksInBatches() {
+            const BATCH_SIZE = 32; // 控制并发写入数量
+            for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+              const batch = chunks.slice(i, i + BATCH_SIZE);
+              await Promise.all(
+                batch.map(async (chunk, index) => {
+                  await createChunkRecordRaw({
+                    knowledgeBaseId,
+                    content: chunk.pageContent,
+                    embedding: embeddings[index + i], // 注意索引偏移
+                  });
+                })
+              );
+            }
+          })();
 
           // 更新处理进度
           updateStepProgress();

@@ -141,7 +141,7 @@ export default function NewKnowledgePage() {
       } catch (error) {
         console.error("进度查询失败:", error);
         setLoading(false);
-        setError("文件失败，请刷新页面重试");
+        setError("文件上传失败，请刷新页面重试");
       }
     };
     poll();
