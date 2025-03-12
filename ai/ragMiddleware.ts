@@ -14,7 +14,6 @@ interface KnowledgeChunk {
 }
 
 const openai = createOpenAI({
-  baseURL: "https://oneapi.isea.site/v1",
   apiKey: process.env.OPENAI_API_KEY,
 });
 
