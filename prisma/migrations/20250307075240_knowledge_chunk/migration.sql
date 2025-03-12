@@ -5,7 +5,7 @@ CREATE TABLE "KnowledgeChunk" (
     "knowledgeBaseId" TEXT NOT NULL,
     "chatId" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "embedding" vector(3072) NOT NULL,
+    "embedding" vector(1536) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "KnowledgeChunk_pkey" PRIMARY KEY ("id")
