@@ -23,7 +23,7 @@ const idSchema = z.object({
   }),
 });
 
-const embeddingModel = openai.embedding("text-embedding-3-large");
+const embeddingModel = openai.embedding("text-embedding-3-small");
 
 export const ragMiddleware: LanguageModelV1Middleware = {
   transformParams: async (options) => {
@@ -66,7 +66,7 @@ export const ragMiddleware: LanguageModelV1Middleware = {
         messages.push(recentMessage);
         return params;
       }
-      
+
       // 2. 获取关联知识库
       const knowledgeBases = await getKnowledgeBasesByChatId(chatId);
       const kbIds = knowledgeBases.map((kb) => kb.knowledgeBase.id);

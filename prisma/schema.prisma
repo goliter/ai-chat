@@ -86,7 +86,7 @@ model KnowledgeChunk {
   id              String        @id @default(uuid())
   knowledgeBaseId String
   content         String        // 文本内容（chunk）
-  embedding       Unsupported("vector(3072)")
+  embedding       Unsupported("vector(1536)")
   createdAt       DateTime      @default(now())
   
   // 关联：一个知识库下有多个 chunk

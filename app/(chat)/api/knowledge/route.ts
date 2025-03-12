@@ -145,7 +145,7 @@ async function processFilesAsync(
             const batch = chunks.slice(i, i + BATCH_SIZE);
             embeddingPromises.push(
               embedMany({
-                model: openai.embedding("text-embedding-3-large"),
+                model: openai.embedding("text-embedding-3-small"),
                 values: batch.map((chunk) => chunk.pageContent),
               })
             );
