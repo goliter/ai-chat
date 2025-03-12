@@ -98,6 +98,8 @@ export async function GET(req: NextRequest) {
     percentage: progress.percentage,
     currentStep: progress.currentStep,
     errors: progress.errors,
+    total: progress.total,
+    processedFiles: progress.processedFiles,
   });
 }
 
@@ -115,23 +117,21 @@ async function processFilesAsync(
     // 增强进度更新逻辑
     const updateStepProgress = () => {
       completedSteps++;
-      const percentage = Math.round((completedSteps / totalSteps) * 100);
+      const percentage = Math.min(
+        // 添加最小值限制
+        Math.round((completedSteps / totalSteps) * 100),
+        99 // 确保最终完成前不超过99%
+      );
       updateProgress(taskId, {
         percentage,
-        currentStep: `处理文件中 (${percentage}%)`,
-        processedFiles: Math.floor(completedSteps),
+        currentStep: `处理文件中 (${completedSteps}/${totalSteps})`,
+        processedFiles: completedSteps,
       });
     };
 
     await Promise.allSettled(
-      files.map(async (file, index) => {
+      files.map(async (file) => {
         try {
-          // 步骤1: 初始化处理
-          updateProgress(taskId, {
-            currentStep: `开始处理文件 ${index + 1}/${files.length} (${
-              file.name
-            })`,
-          });
 
           // 文件存储逻辑
           const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
@@ -163,7 +163,6 @@ async function processFilesAsync(
           // 并行处理所有批量请求
           const results = await Promise.all(embeddingPromises);
           const embeddings = results.flatMap((r) => r.embeddings);
-          updateStepProgress();
 
           // 创建文件记录
           const fileRecord = await createFileRecord({
@@ -186,7 +185,7 @@ async function processFilesAsync(
           );
 
           // 更新处理进度
-          updateProgress(taskId, { processedFiles: index + 1 });
+          updateStepProgress();
           return fileRecord;
         } catch (error) {
           const errorMsg = `文件 ${file.name} 处理失败: ${
@@ -194,15 +193,23 @@ async function processFilesAsync(
           }`;
           console.error(errorMsg);
           updateProgress(taskId, {
+            processedFiles: completedSteps,
             errors: [...progressStore.get(taskId)!.errors, errorMsg],
           });
           return null;
         }
       })
     );
+    // 完成所有文件处理
+    updateProgress(taskId, {
+      percentage: 100,
+      currentStep: "处理完成",
+      processedFiles: files.length,
+      total: files.length,
+    });
 
     // 最终清理
-    setTimeout(() => progressStore.delete(taskId), 60_000); // 1分钟后清除进度
+    setTimeout(() => progressStore.delete(taskId), 300_000); // 5分钟后清除进度
   } catch (error) {
     console.error("文件处理异常:", error);
   }

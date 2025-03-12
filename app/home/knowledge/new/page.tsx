@@ -132,7 +132,7 @@ export default function NewKnowledgePage() {
         // 修改完成条件判断
         if (data.percentage >= 100 || data.errors?.length > 0) {
           setLoading(false);
-          if (data.percentage >= 100 && data.errors?.length === 0) {
+          if (data.percentage >= 100 && data.processedFiles >= data.total) {
             router.push(`/home/knowledge`);
           }
         } else {
@@ -141,7 +141,7 @@ export default function NewKnowledgePage() {
       } catch (error) {
         console.error("进度查询失败:", error);
         setLoading(false);
-        setError("进度更新失败，请刷新页面重试");
+        setError("文件失败，请刷新页面重试");
       }
     };
     poll();
