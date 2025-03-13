@@ -108,39 +108,39 @@ export default function NewKnowledgePage() {
 
   // 进度轮询逻辑
    const startProgressPolling = (taskId: string) => {
-     const poll = async (attempt = 1) => {
-       try {
-         const res = await fetch(`/api/knowledge?taskId=${taskId}`);
-         if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+    const poll = async (attempt = 1) => {
+      try {
+        const res = await fetch(`/api/knowledge?taskId=${taskId}`);
+        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
 
-         const data = await res.json();
+        const data = await res.json();
+        
+        // 新增：更新进度状态
+        setProgress({
+          percentage: data.percentage || 0,
+          currentStep: data.currentStep || "处理中",
+          errors: data.errors || [],
+        });
 
-         // 新增：更新进度状态
-         setProgress({
-           percentage: data.percentage || 0,
-           currentStep: data.currentStep || "处理中",
-           errors: data.errors || [],
-         });
+        // 严格完成条件判断
+        const isComplete =
+          data.percentage >= 100 &&
+          data.processedFiles >= data.total &&
+          data.errors.length === 0;
 
-         // 严格完成条件判断
-         const isComplete =
-           data.percentage >= 100 &&
-           data.processedFiles >= data.total &&
-           data.errors.length === 0;
-
-         if (isComplete) {
-           router.push("/home/knowledge");
-         } else if (attempt < 5) {
-           setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
-         }
-       } catch (error) {
-         if (attempt < 5) {
-           setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
-         }
-       }
-     };
-     poll();
-   };
+        if (isComplete) {
+          router.push("/home/knowledge");
+        } else if (attempt < 5) {
+          setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
+        }
+      } catch (error) {
+        if (attempt < 5) {
+          setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
+        }
+      }
+    };
+    poll();
+  };
 
   return (
     <div className="max-w-3xl mx-auto p-6">
