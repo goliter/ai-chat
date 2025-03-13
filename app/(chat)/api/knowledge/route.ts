@@ -315,7 +315,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany } from "ai";
 
 const openai = createOpenAI({
-  baseURL: "https://oneapi.isea.site/v1",
   apiKey: process.env.OPENAI_API_KEY,
 });
 
