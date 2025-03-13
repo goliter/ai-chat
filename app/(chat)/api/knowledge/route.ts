@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
-import { v4 as uuidv4 } from "uuid";
+// import { v4 as uuidv4 } from "uuid";
 import {
   createKnowledgeBase,
   createFileRecord,
@@ -12,16 +12,16 @@ import mammoth from "mammoth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { embedMany } from "ai";
 
-const progressStore = new Map<
-  string,
-  {
-    percentage: number; // 总进度百分比
-    currentStep: string; // 当前步骤描述
-    errors: string[]; // 错误集合
-    total: number; // 总文件数
-    processedFiles: number; // 已处理文件数
-  }
->();
+// const progressStore = new Map<
+//   string,
+//   {
+//     percentage: number; // 总进度百分比
+//     currentStep: string; // 当前步骤描述
+//     errors: string[]; // 错误集合
+//     total: number; // 总文件数
+//     processedFiles: number; // 已处理文件数
+//   }
+// >();
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -45,23 +45,23 @@ export async function POST(req: NextRequest) {
 
     // 处理上传文件
     const files = formData.getAll("files") as File[];
-    const taskId = uuidv4(); // 生成唯一任务ID
+    //const taskId = uuidv4(); // 生成唯一任务ID
 
-    // 初始化进度
-    progressStore.set(taskId, {
-      total: files.length,
-      processedFiles: 0,
-      currentStep: "准备开始",
-      errors: [],
-      percentage: 0,
-    });
+    // // 初始化进度
+    // progressStore.set(taskId, {
+    //   total: files.length,
+    //   processedFiles: 0,
+    //   currentStep: "准备开始",
+    //   errors: [],
+    //   percentage: 0,
+    // });
 
     // 异步处理文件
-    processFilesAsync(files, knowledgeBase.id, taskId);
+    processFilesAsync(files, knowledgeBase.id);
 
     // 返回任务ID
     return NextResponse.json({
-      taskId,
+      success: true,
       knowledgeBaseId: knowledgeBase.id,
     });
   } catch (error: unknown) {
@@ -76,56 +76,55 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// 修改GET方法处理逻辑
-export async function GET(req: NextRequest) {
-  const taskId = req.nextUrl.searchParams.get("taskId");
-  if (!taskId) {
-    return NextResponse.json(
-      { message: "缺少必要参数: taskId" },
-      { status: 400 }
-    );
-  }
+// // 修改GET方法处理逻辑
+// export async function GET(req: NextRequest) {
+//   const taskId = req.nextUrl.searchParams.get("taskId");
+//   if (!taskId) {
+//     return NextResponse.json(
+//       { message: "缺少必要参数: taskId" },
+//       { status: 400 }
+//     );
+//   }
+//
+//   const progress = progressStore.get(taskId);
+//   if (!progress) {
+//     return NextResponse.json(
+//       { message: "任务不存在或已过期" },
+//       { status: 404 } // 将404改为更合适的错误代码
+//     );
+//   }
 
-  const progress = progressStore.get(taskId);
-  if (!progress) {
-    return NextResponse.json(
-      { message: "任务不存在或已过期" },
-      { status: 404 } // 将404改为更合适的错误代码
-    );
-  }
-
-  return NextResponse.json({
-    percentage: progress.percentage,
-    currentStep: progress.currentStep,
-    errors: progress.errors,
-    total: progress.total,
-    processedFiles: progress.processedFiles,
-  });
-}
+//   return NextResponse.json({
+//     percentage: progress.percentage,
+//     currentStep: progress.currentStep,
+//     errors: progress.errors,
+//     total: progress.total,
+//     processedFiles: progress.processedFiles,
+//   });
+// }
 
 // 异步文件处理函数
 async function processFilesAsync(
   files: File[],
   knowledgeBaseId: string,
-  taskId: string
 ) {
   try {
-    const totalSteps = files.length;
-    let completedSteps = 0;
+    // const totalSteps = files.length;
+    // let completedSteps = 0;
 
-    // 增强的进度更新逻辑
-    const updateStepProgress = () => {
-      completedSteps++;
-      const percentage = Math.min(
-        Math.round((completedSteps / totalSteps) * 100),
-        99
-      );
-      updateProgress(taskId, {
-        percentage,
-        currentStep: `处理文件中 (${completedSteps}/${totalSteps})`,
-        processedFiles: completedSteps,
-      });
-    };
+    // // // 增强的进度更新逻辑
+    // // const updateStepProgress = () => {
+    // //   completedSteps++;
+    // //   const percentage = Math.min(
+    // //     Math.round((completedSteps / totalSteps) * 100),
+    // //     99
+    // //   );
+    // //   updateProgress(taskId, {
+    // //     percentage,
+    // //     currentStep: `处理文件中 (${completedSteps}/${totalSteps})`,
+    // //     processedFiles: completedSteps,
+    // //   });
+    // // };
 
     // 添加文件处理重试机制
     const processFileWithRetry = async (file: File, retries = 3) => {
@@ -192,7 +191,7 @@ async function processFilesAsync(
             knowledgeBaseId,
           });
           console.log(`[文件处理] 成功完成: ${file.name}`);
-          updateStepProgress(); // 新增进度更新
+          // updateStepProgress(); // 新增进度更新
           
           return fileRecord;
         } catch (error) {
@@ -218,46 +217,46 @@ async function processFilesAsync(
           result.reason.error?.message || "未知错误"
       );
 
-    // 最终进度更新（强制完成）
-    updateProgress(taskId, {
-      percentage: 100,
-      currentStep: "处理完成",
-      processedFiles: files.length,
-      total: files.length,
-      errors: [...progressStore.get(taskId)!.errors, ...fileErrors],
-    });
+    // // 最终进度更新（强制完成）
+    // updateProgress(taskId, {
+    //   percentage: 100,
+    //   currentStep: "处理完成",
+    //   processedFiles: files.length,
+    //   total: files.length,
+    //   errors: [...progressStore.get(taskId)!.errors, ...fileErrors],
+    // });
 
-    // 清理任务（15分钟后）
-    setTimeout(() => progressStore.delete(taskId), 900_000);
+    // // 清理任务（15分钟后）
+    // setTimeout(() => progressStore.delete(taskId), 900_000);
   } catch (error) {
     console.error("[全局错误] 文件处理异常:", error);
-    updateProgress(taskId, {
-      errors: [
-        ...progressStore.get(taskId)!.errors,
-        `系统错误: ${error instanceof Error ? error.message : "未知错误"}`,
-      ],
-    });
+    // updateProgress(taskId, {
+    //   errors: [
+    //     ...progressStore.get(taskId)!.errors,
+    //     `系统错误: ${error instanceof Error ? error.message : "未知错误"}`,
+    //   ],
+    // });
   }
 }
 
-// 辅助函数：更新进度
-function updateProgress(
-  taskId: string,
-  update: Partial<{
-    total: number;
-    processedFiles: number;
-    currentStep: string;
-    errors: string[];
-    percentage: number;
-  }>
-) {
-  const current = progressStore.get(taskId)!;
-  progressStore.set(taskId, {
-    ...current,
-    ...update,
-    errors: update.errors || current.errors,
-  });
-}
+// // 辅助函数：更新进度
+// function updateProgress(
+//   taskId: string,
+//   update: Partial<{
+//     total: number;
+//     processedFiles: number;
+//     currentStep: string;
+//     errors: string[];
+//     percentage: number;
+//   }>
+// ) {
+//   const current = progressStore.get(taskId)!;
+//   progressStore.set(taskId, {
+//     ...current,
+//     ...update,
+//     errors: update.errors || current.errors,
+//   });
+// }
 
 // 辅助函数：解析文件内容
 async function parseFileContent(file: File, buffer: Buffer, fileExt: string) {

@@ -95,52 +95,52 @@ export default function NewKnowledgePage() {
       if (!res.ok) {
         throw new Error(await res.text());
       }
-
-      const { taskId } = await res.json();
-      startProgressPolling(taskId);
+      router.push("/home/knowledge");
+      // const { taskId } = await res.json();
+      // startProgressPolling(taskId);
     } catch (error) {
-      console.error("创建知识库出错：", error);
-      setError(error instanceof Error ? error.message : "发生未知错误");
+      // console.error("创建知识库出错：", error);
+       setError(error instanceof Error ? error.message : "发生未知错误");
       setLoading(false); // 错误时立即关闭 loading
     } finally {
     }
   };
 
-  // 进度轮询逻辑
-   const startProgressPolling = (taskId: string) => {
-    const poll = async (attempt = 1) => {
-      try {
-        const res = await fetch(`/api/knowledge?taskId=${taskId}`);
-        if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+  // // 进度轮询逻辑
+  //  const startProgressPolling = (taskId: string) => {
+  //   const poll = async (attempt = 1) => {
+  //     try {
+  //       const res = await fetch(`/api/knowledge?taskId=${taskId}`);
+  //       if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
 
-        const data = await res.json();
-        
-        // 新增：更新进度状态
-        setProgress({
-          percentage: data.percentage || 0,
-          currentStep: data.currentStep || "处理中",
-          errors: data.errors || [],
-        });
+  //       const data = await res.json();
 
-        // 严格完成条件判断
-        const isComplete =
-          data.percentage >= 100 &&
-          data.processedFiles >= data.total &&
-          data.errors.length === 0;
+  //       // 新增：更新进度状态
+  //       setProgress({
+  //         percentage: data.percentage || 0,
+  //         currentStep: data.currentStep || "处理中",
+  //         errors: data.errors || [],
+  //       });
 
-        if (isComplete) {
-          router.push("/home/knowledge");
-        } else if (attempt < 5) {
-          setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
-        }
-      } catch (error) {
-        if (attempt < 5) {
-          setTimeout(() => poll(attempt + 1), 1000 * Math.pow(2, attempt));
-        }
-      }
-    };
-    poll();
-  };
+  //       // 严格完成条件判断
+  //       const isComplete =
+  //         data.percentage >= 100 &&
+  //         data.processedFiles >= data.total &&
+  //         data.errors.length === 0;
+
+  //       if (isComplete) {
+  //         router.push("/home/knowledge");
+  //       } else {
+  //         setTimeout(() => poll(attempt + 1), 1000 );
+  //       }
+  //     } catch (error) {
+  //       if (attempt < 5) {
+  //         setTimeout(() => poll(attempt + 1), 1000 );
+  //       }
+  //     }
+  //   };
+  //   poll();
+  // };
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -242,14 +242,14 @@ export default function NewKnowledgePage() {
           </div>
         </div>
 
-        {/* 进度条 */}
-        {loading && (
+       {/* 进度条
+         {loading && (
           <div className="space-y-4">
-            {/* 当进度为0时显示基础加载状态 */}
+            
             {progress.percentage === 0 && (
               <div className="text-center py-4">正在初始化上传任务...</div>
             )}
-            {/* 当有实际进度时显示进度条 */}
+            
             {progress.percentage > 0 && (
               <div className="relative pt-1">
                 <div className="flex justify-between mb-2">
@@ -282,7 +282,8 @@ export default function NewKnowledgePage() {
               </div>
             )}
           </div>
-        )}
+        )} 
+        */}
 
         <button
           type="submit"
