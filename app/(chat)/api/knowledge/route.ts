@@ -81,11 +81,11 @@ export async function GET(req: NextRequest) {
   const taskId = req.nextUrl.searchParams.get("taskId");
   if (!taskId) {
     return NextResponse.json(
-      { message: "缺少必要参数: taskId" }, 
+      { message: "缺少必要参数: taskId" },
       { status: 400 }
     );
   }
-  
+
   const progress = progressStore.get(taskId);
   if (!progress) {
     return NextResponse.json(
@@ -103,7 +103,6 @@ export async function GET(req: NextRequest) {
   });
 }
 
-
 // 异步文件处理函数
 async function processFilesAsync(
   files: File[],
@@ -111,16 +110,15 @@ async function processFilesAsync(
   taskId: string
 ) {
   try {
-    const totalSteps = files.length ; //文件数
+    const totalSteps = files.length;
     let completedSteps = 0;
 
-    // 增强进度更新逻辑
+    // 增强的进度更新逻辑
     const updateStepProgress = () => {
       completedSteps++;
       const percentage = Math.min(
-        // 添加最小值限制
         Math.round((completedSteps / totalSteps) * 100),
-        99 // 确保最终完成前不超过99%
+        99
       );
       updateProgress(taskId, {
         percentage,
@@ -129,25 +127,27 @@ async function processFilesAsync(
       });
     };
 
-    await Promise.allSettled(
-      files.map(async (file) => {
+    // 添加文件处理重试机制
+    const processFileWithRetry = async (file: File, retries = 3) => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          // 文件存储逻辑
-          const buffer = Buffer.from(await file.arrayBuffer()); //文件内容转换
-          console.log(`[File Process] ${file.name}`); // 修改日志标签
+          const buffer = Buffer.from(await file.arrayBuffer());
+          console.log(
+            `[文件处理] 开始处理: ${file.name} (尝试 ${attempt}/${retries})`
+          );
 
-          // 步骤1: 解析内容
+          // 解析文件内容
           const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
           const fileContent = await parseFileContent(file, buffer, fileExt);
 
-          // 步骤2: 分块处理
+          // 文本分块处理
           const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
           });
           const chunks = await splitter.createDocuments([fileContent]);
 
-          // 步骤3: 向量化处理(最慢的一部分)
-          const BATCH_SIZE = 32; // 基于 token 限制计算 (8192 tokens/request ÷ 平均 256 tokens/chunk)
+          // 分批处理向量化
+          const BATCH_SIZE = 32;
           const embeddingPromises = [];
           for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
             const batch = chunks.slice(i, i + BATCH_SIZE);
@@ -159,64 +159,84 @@ async function processFilesAsync(
             );
           }
 
-          // 并行处理所有批量请求
+          // 等待所有向量化完成
           const results = await Promise.all(embeddingPromises);
           const embeddings = results.flatMap((r) => r.embeddings);
 
+          // 严格的分块存储控制
+          const BATCH_STORAGE_SIZE = 32;
+          for (let i = 0; i < chunks.length; i += BATCH_STORAGE_SIZE) {
+            const batch = chunks.slice(i, i + BATCH_STORAGE_SIZE);
+            await Promise.all(
+              batch.map(async (chunk, index) => {
+                const embeddingIndex = i + index;
+                if (embeddingIndex >= embeddings.length) {
+                  throw new Error(
+                    `Embedding索引越界: ${embeddingIndex} (总长度: ${embeddings.length})`
+                  );
+                }
+                await createChunkRecordRaw({
+                  knowledgeBaseId,
+                  content: chunk.pageContent,
+                  embedding: embeddings[embeddingIndex],
+                });
+              })
+            );
+          }
           // 创建文件记录
           const fileRecord = await createFileRecord({
             fileName: file.name,
-            filePath: "memory://" + file.name, // 使用内存路径标识
+            filePath: `memory://${file.name}`,
             fileSize: file.size,
             mimeType: file.type,
             knowledgeBaseId,
           });
-
-          // 修改分块存储逻辑 - 添加批处理控制
-          await(async function processChunksInBatches() {
-            const BATCH_SIZE = 32; // 控制并发写入数量
-            for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-              const batch = chunks.slice(i, i + BATCH_SIZE);
-              await Promise.all(
-                batch.map(async (chunk, index) => {
-                  await createChunkRecordRaw({
-                    knowledgeBaseId,
-                    content: chunk.pageContent,
-                    embedding: embeddings[index + i], // 注意索引偏移
-                  });
-                })
-              );
-            }
-          })();
-
-          // 更新处理进度
-          updateStepProgress();
+          console.log(`[文件处理] 成功完成: ${file.name}`);
+          updateStepProgress(); // 新增进度更新
+          
           return fileRecord;
         } catch (error) {
-          const errorMsg = `文件 ${file.name} 处理失败: ${
-            error instanceof Error ? error.message : "未知错误"
-          }`;
-          console.error(errorMsg);
-          updateProgress(taskId, {
-            processedFiles: completedSteps,
-            errors: [...progressStore.get(taskId)!.errors, errorMsg],
-          });
-          return null;
+          console.error(`[文件处理] 尝试 ${attempt} 失败: ${file.name}`, error);
+          if (attempt === retries) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // 指数退避
         }
-      })
+      }
+    };
+
+    // 并行处理所有文件（带错误收集）
+    const results = await Promise.allSettled(
+      files.map((file) =>
+        processFileWithRetry(file).catch((error) => ({ file, error }))
+      )
     );
-    // 完成所有文件处理
+
+    // 收集处理错误
+    const fileErrors = results
+      .filter((result) => result.status === "rejected")
+      .map(
+        (result: PromiseRejectedResult) =>
+          result.reason.error?.message || "未知错误"
+      );
+
+    // 最终进度更新（强制完成）
     updateProgress(taskId, {
       percentage: 100,
       currentStep: "处理完成",
       processedFiles: files.length,
       total: files.length,
+      errors: [...progressStore.get(taskId)!.errors, ...fileErrors],
     });
 
-    // 最终清理
-    setTimeout(() => progressStore.delete(taskId), 300_000); // 5分钟后清除进度
+    // 清理任务（15分钟后）
+    setTimeout(() => progressStore.delete(taskId), 900_000);
   } catch (error) {
-    console.error("文件处理异常:", error);
+    console.error("[全局错误] 文件处理异常:", error);
+    updateProgress(taskId, {
+      errors: [
+        ...progressStore.get(taskId)!.errors,
+        `系统错误: ${error instanceof Error ? error.message : "未知错误"}`,
+      ],
+    });
   }
 }
 
