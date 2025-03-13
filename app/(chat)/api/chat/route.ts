@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   await createMessage(id, "user", messages[messages.length - 1].content);
-
+  
   try{
     const result = streamText({
     model: customModel,

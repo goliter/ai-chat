@@ -1,6 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
 import { createOpenAI } from "@ai-sdk/openai";
-import { LanguageModelV1Middleware, embed, generateObject, generateText } from "ai";
+import {
+  LanguageModelV1Middleware,
+  embed,
+  generateObject,
+  generateText,
+} from "ai";
 import { z } from "zod";
 import {
   getKnowledgeBasesByChatId,
@@ -41,7 +46,7 @@ export const ragMiddleware: LanguageModelV1Middleware = {
     try {
       // 1. 获取最后一条用户消息
       if (messages.length === 0) return params;
-      const recentMessage = messages.pop();
+       const recentMessage = messages[messages.length - 1];
 
       if (!recentMessage || recentMessage.role !== "user") {
         if (recentMessage) {
@@ -91,22 +96,29 @@ export const ragMiddleware: LanguageModelV1Middleware = {
         5
       )) as KnowledgeChunk[];
 
-        messages.push({
-          role: "user",
-          content: [
-            ...recentMessage.content,
-            {
-              type: "text",
-              text: "Here is some relevant information that you can use to answer the question:",
-            },
-            ...chunks.map((chunk) => ({
-              type: "text" as const,
-              text: chunk.content,
-            })),
-          ],
-        });
+         const updatedMessages = [
+           ...messages.slice(0, -1), // 保留除最后一条之外的所有消息
+           {
+             role: "user" as const,
+             content: [
+               ...recentMessage.content,
+               {
+                 type: "text",
+                 text: "Here is some relevant information that you can use to answer the question:",
+               },
+               ...chunks.map((chunk) => ({
+                 type: "text" as const,
+                 text: chunk.content,
+               })),
+             ]  as Array<{ type: 'text'; text: string }>,
+           },
+         ];
 
-      return { ...params, prompt: messages };
+      return {
+        ...params,
+        prompt: updatedMessages,
+        inputFormat: "messages" as const,
+      };
     } catch (error) {
       console.error("RAG中间件错误:", error);
       return params;
