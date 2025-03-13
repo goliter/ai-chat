@@ -216,7 +216,7 @@ async function processFilesAsync(
         (result: PromiseRejectedResult) =>
           result.reason.error?.message || "未知错误"
       );
-
+    console.log("文件处理错误:", fileErrors);
     // // 最终进度更新（强制完成）
     // updateProgress(taskId, {
     //   percentage: 100,
