@@ -3,7 +3,7 @@ import { wrapLanguageModel } from "ai";
 import { ragMiddleware } from "./ragMiddleware";
 
 const openai = createOpenAI({
-  baseURL: "https://oneapi.isea.site/v1",
+  //baseURL: "https://oneapi.isea.site/v1",
   apiKey: process.env.OPENAI_API_KEY,
 });
 
