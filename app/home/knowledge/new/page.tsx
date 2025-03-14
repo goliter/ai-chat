@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // /* eslint-disable @typescript-eslint/no-unused-vars */
 // "use client";
 
@@ -245,11 +246,11 @@
 //        进度条
 //          {loading && (
 //           <div className="space-y-4">
-            
+
 //             {progress.percentage === 0 && (
 //               <div className="text-center py-4">正在初始化上传任务...</div>
 //             )}
-            
+
 //             {progress.percentage > 0 && (
 //               <div className="relative pt-1">
 //                 <div className="flex justify-between mb-2">
@@ -282,8 +283,7 @@
 //               </div>
 //             )}
 //           </div>
-//         )} 
-       
+//         )}
 
 //         <button
 //           type="submit"
@@ -298,9 +298,6 @@
 // }
 
 
-
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -313,10 +310,21 @@ export default function NewKnowledgePage() {
   const { data: session, status } = useSession();
   const [title, setTitle] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const completionTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const [progress, setProgress] = useState({
+    percentage: 0,
+    currentStep: "",
+    errors: [] as string[],
+    total: 0,
+    processed: 0,
+    isCompleted: false,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -324,12 +332,7 @@ export default function NewKnowledgePage() {
     }
   }, [status, router]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]); // 合并旧文件和新文件
-      setError("");
-    }
-  };
+  // 文件拖拽处理函数
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -351,17 +354,24 @@ export default function NewKnowledgePage() {
     handleDrag(e);
     setIsDragging(false);
     if (e.dataTransfer.files?.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]); // 合并旧文件和新文件
+      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
       setError("");
     }
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+      setError("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const userId = session?.user?.id;
-    if (!userId || !title.trim()) {
+    if (!session?.user?.id || !title.trim()) {
       setError("用户未登录或标题为空");
       setLoading(false);
       return;
@@ -378,6 +388,7 @@ export default function NewKnowledgePage() {
       formData.append("title", title);
       files.forEach((file) => formData.append("files", file));
 
+      // 先发送POST请求获取任务ID
       const res = await fetch("/api/knowledge", {
         method: "POST",
         body: formData,
@@ -386,33 +397,74 @@ export default function NewKnowledgePage() {
       if (!res.ok) {
         throw new Error(await res.text());
       }
-      const { knowledgeBaseId } = await res.json();
-      router.push(`/home/knowledge`);
-    } catch (error) {
-      console.error("创建知识库出错：", error);
-      setError(error instanceof Error ? error.message : "发生未知错误，请重试");
-    } finally {
+
+      const { taskId } = await res.json();
+
+      // 使用任务ID建立SSE连接
+      const eventSource = new EventSource(`/api/knowledge?taskId=${taskId}`);
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        setProgress((prev) => ({
+          ...prev,
+          ...data,
+          percentage: Math.min(data.percentage, 100),
+          isCompleted: data.isCompleted || prev.isCompleted,
+        }));
+
+        if (data.isCompleted) {
+          completionTimer.current = setTimeout(() => {
+            router.push("/home/knowledge");
+          }, 2500);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setError("连接中断，请稍后刷新页面查看结果");
+        eventSource.close();
+      };
+    } catch (err) {
+      eventSourceRef.current?.close();
+      setError(err instanceof Error ? err.message : "上传失败");
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (completionTimer.current) {
+        clearTimeout(completionTimer.current);
+      }
+      eventSourceRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+      if (completionTimer.current) {
+        clearTimeout(completionTimer.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="max-w-3xl mx-auto p-6">
-      {/* 返回按钮 */}
       <Button
         onClick={() => router.replace("/home/knowledge")}
         className="fixed left-4 bottom-12 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-colors duration-200"
       >
         返回
       </Button>
+
       <h1 className="text-3xl font-semibold mb-6">新建知识库</h1>
+
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 错误提示 */}
         {error && (
           <div className="p-4 bg-red-50 text-red-700 rounded-lg">{error}</div>
         )}
 
-        {/* 知识库名称 */}
         <div>
           <label
             htmlFor="title"
@@ -431,7 +483,6 @@ export default function NewKnowledgePage() {
           />
         </div>
 
-        {/* 文件上传区域 */}
         <div>
           <h2 className="text-xl font-medium mb-2">上传文件</h2>
           <div className="space-y-4">
@@ -463,7 +514,6 @@ export default function NewKnowledgePage() {
               </button>
             </div>
 
-            {/* 已选文件列表 */}
             {files.length > 0 && (
               <div className="space-y-2">
                 <h3 className="font-medium">已选文件：</h3>
@@ -479,11 +529,9 @@ export default function NewKnowledgePage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => {
-                          const newFiles = [...files];
-                          newFiles.splice(index, 1);
-                          setFiles(newFiles);
-                        }}
+                        onClick={() =>
+                          setFiles(files.filter((_, i) => i !== index))
+                        }
                         className="ml-4 text-red-600 hover:text-red-700"
                       >
                         移除
@@ -495,6 +543,40 @@ export default function NewKnowledgePage() {
             )}
           </div>
         </div>
+
+        {loading && (
+          <div className="space-y-4">
+            <div className="relative pt-1">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-medium">
+                  {progress.percentage}% 完成
+                </span>
+              </div>
+              <div className="overflow-hidden h-2 mb-4 rounded-full bg-blue-100">
+                <div
+                  style={{ width: `${progress.percentage}%` }}
+                  className="h-full bg-blue-600 transition-all duration-300"
+                />
+              </div>
+              <div className="text-sm text-gray-600">
+                已处理 {progress.processed}/{progress.total} 个文件
+              </div>
+            </div>
+
+            {progress.errors.length > 0 && (
+              <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg">
+                <h4 className="font-medium mb-2">处理遇到问题：</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  {progress.errors.map((err, i) => (
+                    <li key={i} className="text-sm">
+                      {err}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           type="submit"
