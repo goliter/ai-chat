@@ -6,6 +6,25 @@ import { getUserFromDb } from "@/lib/db";
 import { compareSync } from "bcrypt-ts";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // 添加信任主机配置
+  trustHost: true,
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        // 根据部署环境设置域名
+        domain:
+          process.env.NODE_ENV === "production"
+            ? process.env.DOMAIN
+            : "localhost",
+      },
+    },
+  },
+
   providers: [
     Credentials({
       credentials: {

@@ -390,6 +390,8 @@ async function processFiles(files: File[], baseId: string, taskId: string) {
           // 文本分块
           const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 1000,
+            chunkOverlap: 100, // 保持一定的重叠，保证上下文衔接
+            separators: ["\n\n", "\n", "。", " ", ""], // 添加适合的分隔符
           });
           const chunks = await splitter.createDocuments([content]);
 
