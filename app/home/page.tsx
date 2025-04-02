@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/loading";
 
 export default function HomePage() {
-  const [hovered] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const router = useRouter();
   const { status } = useSession();
   useEffect(() => {
@@ -52,6 +52,8 @@ export default function HomePage() {
           className={`absolute bottom-10 left-1/2 transform -translate-x-1/2 transition-opacity duration-500 ${
             hovered ? "opacity-100" : "opacity-50"
           }`}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
         >
           <p className="text-sm">AI Chat 提供智能化的交互体验 🚀</p>
         </div>

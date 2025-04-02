@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Message } from "ai";
 import { KnowledgeBase } from "@prisma/client";
-import { Message as PreviewMessage } from "./message"; // 导入Message组件
+import { Message as PreviewMessage } from "./message";
 
 export function Chat({
   id,

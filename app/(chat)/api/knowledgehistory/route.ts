@@ -11,7 +11,6 @@ export async function GET() {
 
   try {
     const rawKnowledges = await getUserKnowledgeBases(session.user.id);
-
     // 转换所有日期字段
     const knowledges = rawKnowledges.map((knowledge) => ({
       ...knowledge,
