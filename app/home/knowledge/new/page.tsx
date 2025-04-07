@@ -393,7 +393,7 @@ export default function NewKnowledgePage() {
         method: "POST",
         body: formData,
       });
-
+ 
       if (!res.ok) {
         throw new Error(await res.text());
       }
@@ -433,18 +433,16 @@ export default function NewKnowledgePage() {
 
   useEffect(() => {
     return () => {
+      // 清理计时器
       if (completionTimer.current) {
         clearTimeout(completionTimer.current);
+        completionTimer.current = null;
       }
-      eventSourceRef.current?.close();
-    };
-  }, []);
 
-  useEffect(() => {
-    return () => {
-      eventSourceRef.current?.close();
-      if (completionTimer.current) {
-        clearTimeout(completionTimer.current);
+      // 关闭 SSE 连接
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);

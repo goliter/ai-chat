@@ -482,7 +482,7 @@ async function parseFile(file: File, buffer: Buffer): Promise<string> {
     );
   }
 }
-
+ 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
